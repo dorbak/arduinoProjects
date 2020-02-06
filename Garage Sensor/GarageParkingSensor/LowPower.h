@@ -1,5 +1,3 @@
-#ifndef LowPower_h
-#define LowPower_h
 
 #include "Arduino.h"
 
