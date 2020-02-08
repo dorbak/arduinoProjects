@@ -90,6 +90,8 @@ void awake()
   digitalWrite(powerPin, HIGH);
   long currentTime = millis();
   timeStarted = currentTime;
+  int newdistance = 999;
+  int distance = 999;
   //Serial.println(timeStarted);
   while (currentTime - timeStarted <= timeout)
   {
@@ -100,7 +102,19 @@ void awake()
       delay (250);
       digitalWrite(13, LOW);
       delay(750);
-      readSensor();
+      
+      newdistance = readSensor();
+      if (newdistance != distance)
+      {
+        timeStarted = currentTime;
+        distance = newdistance;
+      }
+       else
+       {
+        Serial.println("Distance hasn't changed...");
+        Serial.print("Time left: ");
+        Serial.println(currentTime - timeStarted);
+       }
   }
   sleep();
 }
@@ -113,7 +127,7 @@ void sleep()
 
 }
 
-void readSensor()
+int readSensor()
 {
   
   long duration;
@@ -143,9 +157,9 @@ void readSensor()
       setSprite(circle[1]);
     else if (distance > 20 && distance <=30)
       setSprite(circle[2]);
-    else if (distance > 12 && distance <=20)
+    else if (distance >= 12 && distance <=20)
       setSprite(circle[3]);
-    else if (distance <=12)
+    else if (distance <12)
       setSprite(circle[4]);
   }
   else
@@ -172,6 +186,7 @@ void readSensor()
     analogWrite(bluepin, 0);
     analogWrite(greenpin, 255);
   }  
+  return distance;
 }
 void wakeup() {
   currentTime = 0;
