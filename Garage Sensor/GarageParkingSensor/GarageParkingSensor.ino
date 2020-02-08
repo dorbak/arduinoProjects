@@ -9,6 +9,7 @@ int DIN = 12;   // DIN pin of MAX7219 module
 int CLK = 10;   // CLK pin of MAX7219 module
 int CS = 11;    // CS pin of MAX7219 module
 int maxInUse = 1;
+byte packedChars[8];
 LedControl m(DIN, CLK, CS, maxInUse); 
 
 // Ultrasonic Sensor Stuff
@@ -31,18 +32,26 @@ long currentTime=0;
 // Setup
 void setup()
 {
-  pinMode(13, OUTPUT);  // Internal LED
-  digitalWrite(13, LOW); // Turn off Internal LED
-  m.clearDisplay(0);;
-  pinMode(interruptPin, INPUT_PULLUP); //Set up wake up
+  // Set up Internal LED  
+  pinMode(13, OUTPUT);  
+  
+  // Set up Interrupt for Sensor Wakeup
+  pinMode(interruptPin, INPUT_PULLUP); 
+  
+  // Set up Ultrasonic Pins
   pinMode(trigPin, OUTPUT);
   pinMode(echoPin, INPUT);
   pinMode(powerPin, OUTPUT);
-
+  
+  // Setup RGB LED
   pinMode (redpin, OUTPUT);
   pinMode (bluepin, OUTPUT);
   pinMode (greenpin, OUTPUT);
-  
+
+  digitalWrite(13, LOW); // Turn off internal LED
+  m.clearDisplay(0);  // Clear the LED Maxtrix display
+
+  // Start Serial Connection Monitor
   Serial.begin(9600);
 }
 
@@ -51,24 +60,27 @@ void loop()
 {
   Serial.println("Ready!");
   attachInterrupt(0,wakeup, LOW);
- 
+  
   digitalWrite(13, LOW);
+  
+  // Turn off the Ultrasonic Sensor
   digitalWrite(powerPin, LOW);
 
+  // Turn off the RGB LED
   analogWrite(redpin, 0);
   analogWrite(bluepin, 0);
   analogWrite(greenpin, 0);
 
-  delay(1000);
+  // Power off the LED Matrix
   LowPower.powerDown(SLEEP_FOREVER, ADC_OFF, BOD_OFF);
   detachInterrupt(0);
   awake();
 }
 
-
+// Function to write the sprite to the screen (assumes 8 rows)
 void setSprite(byte *sprite){
     for(int r = 0; r < 8; r++){
-        Serial.println(sprite[r], BIN);
+       // Serial.println(sprite[r], BIN);
         m.setRow(0, r, sprite[r]);
     }
 }
@@ -118,16 +130,33 @@ void readSensor()
   Serial.print("Distance: ");
   Serial.println(distance);
 
+  // Convert distance to sprites...
+  // if Greater than 20cm
 
+  //if less than 50cm
+
+  if (distance < 50)
+  {
+    if (distance > 40 && distance <=50)
+      setSprite(circle[0]);
+    else if (distance > 30 && distance <=40)
+      setSprite(circle[1]);
+    else if (distance > 20 && distance <=30)
+      setSprite(circle[2]);
+    else if (distance > 12 && distance <=20)
+      setSprite(circle[3]);
+    else if (distance <=12)
+      setSprite(circle[4]);
+  }
+  else
+    setSprite(upArrow);
+  
   if (distance < 12)
   {
     // Red
     analogWrite(redpin, 255);
     analogWrite(bluepin, 0);
     analogWrite(greenpin, 0);
-    m.clearDisplay(0);
-    setSprite(stop);
-  
   }
   if (distance >= 12 && distance < 20)
   {
@@ -135,9 +164,6 @@ void readSensor()
     analogWrite(redpin, 255);
     analogWrite(bluepin, 0);
     analogWrite(greenpin, 255);
-    m.clearDisplay(0);
-    setSprite(One);
-
   }
   if (distance >=20)
   {
@@ -145,10 +171,6 @@ void readSensor()
     analogWrite(redpin, 0);
     analogWrite(bluepin, 0);
     analogWrite(greenpin, 255);
-    
-    m.clearDisplay(0);
-    setSprite(A);
-
   }  
 }
 void wakeup() {
