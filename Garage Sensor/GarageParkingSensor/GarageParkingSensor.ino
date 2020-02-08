@@ -163,8 +163,9 @@ int readSensor()
       setSprite(circle[4]);
   }
   else
-    setSprite(upArrow);
-  
+  {
+    setSprite(leftArrow);
+  }
   if (distance < 12)
   {
     // Red
