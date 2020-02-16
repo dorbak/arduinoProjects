@@ -1,4 +1,11 @@
 
+#include <ESP8266WiFi.h>
+#include <WiFiClient.h>
+#include <ESP8266WiFiMulti.h>
+#include <ESP8266mDNS.h>
+#include <ESP8266WebServer.h>
+#include <FS.h>   // Include the SPIFFS library
+
 #include "EspMQTTClient.h"
 #include "ArduinoJson.h"
 
@@ -19,15 +26,7 @@ EspMQTTClient client(
 void setup()
 {
   Serial.begin(9600);
-  pinMode(ledPin, OUTPUT);
-  
-  // Initialize SPIFFS
-  if(!SPIFFS.begin(true))
-  {
-    Serial.println("An Error has occurred while mounting SPIFFS");
-    return;
-  }
-  
+
 }
 
 // This function is called once everything is connected (Wifi and MQTT)
