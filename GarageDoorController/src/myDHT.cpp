@@ -2,6 +2,7 @@
 #include <myDHT.h>
 #include <DHT.h>
 #include <Adafruit_Sensor.h>
+#include <mySPIFFS.h>
 
 #define DHTPin 4 // D2
 #define DHTTYPE DHT11
@@ -20,7 +21,8 @@ void MyDHT::setupDHT()
 }
 
 String MyDHT::getMyPressure() {
-  return "N/A";
+  MySPIFFS spiff;  
+  return spiff.readFile("test.txt");
 }
 String MyDHT::getTemp() {
   return String(t);

@@ -38,6 +38,16 @@ void setup() {
 void loop() {
   // put your main code here, to run repeatedly:
 
-  Serial.println(mylib.myfunc(1,3));
+  int test = mylib.myfunc(rand()*10,rand()*10);
+  
+  Serial.println("Writing to file...");
+  File filehandle = mySpiffs.openFile("test.txt","w");
+  if (mylib.writeFile(filehandle,String(test)))
+  {
+    Serial.println("Successfully written the value to file...");
+    Serial.print("Value written: ");
+    Serial.println(test);
+  }
+
   myDHT.readDHT();
 }

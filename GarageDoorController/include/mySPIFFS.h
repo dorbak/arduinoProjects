@@ -7,10 +7,10 @@ class MySPIFFS
 {
 public:
     MySPIFFS();
-    bool writeToFile(File file, String contents);
+    bool writeToFile(File filehandle, String contents);
     File openFile(String filename, String filemode);
     void setupSPIFFS();
-
+    String readFile(String filename);
 private:
   
 };

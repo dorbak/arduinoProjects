@@ -21,12 +21,33 @@ File MySPIFFS::openFile(String filename, String filemode = "r")
   return file;
 }
 
-bool MySPIFFS::writeToFile(File file, String contents)
+String MySPIFFS::readFile(String filename)
 {
-  if (!file)
+    String results = "File not found";
+    if (!SPIFFS.exists(filename))
+    {
+        Serial.println("File not found - ensure the file name is correct!");
+        return "File not found";
+    }
+/*     File filehandle = SPIFFS.open(filename,"r");
+    String results = filehandle.readStringUntil('\n');
+    filehandle.close();
+ */    return results;
+}
+
+bool MySPIFFS::writeToFile(File filehandle, String contents)
+{
+ /*  if (!SPIFFS.exists(filename))
+  {
     Serial.println("File not open - you must call openFile() before calling writeToFile()");
-  int bytesWritten = file.print(contents);
+    return false;
+  } */
+  
+  //File handle = openFile(filename,"w");
+  int bytesWritten = filehandle.print(contents);
   if (bytesWritten > 0)
+  {
     return true;
+  }
   return false;
 }
