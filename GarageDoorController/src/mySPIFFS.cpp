@@ -29,10 +29,17 @@ String MySPIFFS::readFile(String filename)
         Serial.println("File not found - ensure the file name is correct!");
         return "File not found";
     }
-/*     File filehandle = SPIFFS.open(filename,"r");
-    String results = filehandle.readStringUntil('\n');
+   File filehandle = SPIFFS.open(filename,"r");
+   Serial.print("Size of file: ");
+   Serial.println(filehandle.size());
+   String fileContents = "";
+   while (filehandle.available()){
+            fileContents += char(filehandle.read());
+          }
+          filehandle.close();
+    // String results = filehandle.readStringUntil('\n');
     filehandle.close();
- */    return results;
+    return fileContents;
 }
 
 bool MySPIFFS::writeToFile(File filehandle, String contents)

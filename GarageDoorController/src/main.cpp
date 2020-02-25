@@ -40,7 +40,7 @@ void loop() {
 
   int test = mylib.myfunc(rand()*10,rand()*10);
   
-  Serial.println("Writing to file...");
+  /* Serial.println("Writing to file...");
   File filehandle = mySpiffs.openFile("test.txt","w");
   if (mylib.writeFile(filehandle,String(test)))
   {
@@ -48,6 +48,9 @@ void loop() {
     Serial.print("Value written: ");
     Serial.println(test);
   }
+  filehandle.close();
+  mySpiffs.readFile("test.txt"); */
 
+  
   myDHT.readDHT();
 }
