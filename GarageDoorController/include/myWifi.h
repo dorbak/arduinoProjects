@@ -8,8 +8,8 @@ public:
     MyWifi();
     
     void setupServer();
-    void setupWifi();  
-    
+    void setupWifi(char* ssid, char* password);  
+    void setupAP();
 
 private:
 static String processor(const String& var);

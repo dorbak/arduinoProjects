@@ -24,7 +24,9 @@ void setup() {
   Serial.begin(9600);
   pinMode(ledPin, OUTPUT);
   // Setup Wifi
-  myWifi.setupWifi();
+  //myWifi.setupWifi();
+  myWifi.setupAP();
+  
   // Setup DHT Sensor
   myDHT.setupDHT();
   // Initialize SPIFFS
@@ -38,8 +40,16 @@ void setup() {
 void loop() {
   // put your main code here, to run repeatedly:
 
-  int test = mylib.myfunc(rand()*10,rand()*10);
+  //int test = mylib.myfunc(rand()*10,rand()*10);
   
+  
+
+  
+  //myDHT.readDHT();
+}
+
+void neverCalled()
+{
   /* Serial.println("Writing to file...");
   File filehandle = mySpiffs.openFile("test.txt","w");
   if (mylib.writeFile(filehandle,String(test)))
@@ -51,6 +61,7 @@ void loop() {
   filehandle.close();
   mySpiffs.readFile("test.txt"); */
 
-  
-  myDHT.readDHT();
+
+
+
 }
