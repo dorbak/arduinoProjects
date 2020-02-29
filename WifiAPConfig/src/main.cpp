@@ -7,60 +7,23 @@
 #include <ESP8266WebServer.h>
 #include <WiFiManager.h> //https://github.com/tzapu/WiFiManager
 //#include <ESPAsyncWebServer.h>
+#include <WebSocketsServer.h>
 
 ESP8266WebServer server(80);
+WebSocketsServer webSocket(81); 
+// Look at:  https://tttapa.github.io/ESP8266/Chap14%20-%20WebSocket.html
 
-bool loadFromSpiffs(String path)
-{
-  String dataType = "text/plain";
-  if (path.endsWith("/")) path += "index.html"; //this is where index.htm is created
+void setupFunction();
+void redirectToUri(String uri);
+void saveValues();
+bool handleFileRead(String uri);
+void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length)
 
-  if (path.endsWith(".src")) path = path.substring(0, path.lastIndexOf("."));
-  else if (path.endsWith(".htm")) dataType = "text/html";
-  else if (path.endsWith(".html")) dataType = "text/html";
-  else if (path.endsWith(".css")) dataType = "text/css";
-  else if (path.endsWith(".js")) dataType = "application/javascript";
-  else if (path.endsWith(".png")) dataType = "image/png";
-  else if (path.endsWith(".gif")) dataType = "image/gif";
-  else if (path.endsWith(".jpg")) dataType = "image/jpeg";
-  else if (path.endsWith(".ico")) dataType = "image/x-icon";
-  else if (path.endsWith(".xml")) dataType = "text/xml";
-  else if (path.endsWith(".pdf")) dataType = "application/pdf";
-  else if (path.endsWith(".zip")) dataType = "application/zip";
-
-  File dataFile = SPIFFS.open(path.c_str(), "r");   //open file to read
-  if (!dataFile)  //unsuccesful open
-  {
-    Serial.print("Don't know this command and it's not a file in SPIFFS : ");
-    Serial.println(path);
-    return false;
-  }
-  if (server.hasArg("download")) dataType = "application/octet-stream";
-  if (server.streamFile(dataFile, dataType) != dataFile.size()) {}    //a lot happening here
-
-  dataFile.close();
-
-  return true; //shouldn't always return true, Added false above
+void startWebSocket() { // Start a WebSocket server
+  webSocket.begin();                          // start the websocket server
+  webSocket.onEvent(webSocketEvent);          // if there's an incomming websocket message, go to function 'webSocketEvent'
+  Serial.println("WebSocket server started.");
 }
-void handleOther() {   
-  
-  if (loadFromSpiffs(server.uri())) return;   //gotcha - it's a file in SPIFFS
-  String message = "Not Found\n\n";           //or not...
-  message += "URI: ";     //make a 404 response & provide debug information
-  message += server.uri();
-  message += "\nMethod: ";
-  message += (server.method() == HTTP_GET) ? "GET" : "POST";
-  message += "\nArguments: ";
-  message += server.args();
-  message += "\n";
-  for (uint8_t i = 0; i < server.args(); i++)
-  {
-    message += " NAME:" + server.argName(i) + "\n VALUE:" + server.arg(i) + "\n";
-  }
-  server.send(404, "text/plain", message);
-  Serial.println(message);
-}
-
 
 void setup()
 {
@@ -104,18 +67,115 @@ void setup()
       return;
     }
 
-    server.onNotFound(handleOther);
+    server.onNotFound([]() {
+      if (!handleFileRead(server.uri()))
+        server.send(404, "text/plain", "404: Not found");
+    });
     server.begin();
     Serial.print("Web server started on ");
     Serial.println(WiFi.localIP());
   }
+   startWebSocket(); // Start a websocket server
 }
 
-void loop()
-{
-  // put your main code here, to run repeatedly:
-  if (WiFi.status() == WL_CONNECTED) // Start the ASyncWebServer
-  {
-   server.handleClient();
+void startWebSocket() { // Start a WebSocket server
+  webSocket.begin();                          // start the websocket server
+  webSocket.onEvent(webSocketEvent);          // if there's an incomming websocket message, go to function 'webSocketEvent'
+  Serial.println("WebSocket server started.");
+}
+
+void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) { // When a WebSocket message is received
+  switch (type) {
+    case WStype_DISCONNECTED:             // if the websocket is disconnected
+      Serial.printf("[%u] Disconnected!\n", num);
+      break;
+    case WStype_CONNECTED: {              // if a new websocket connection is established
+        IPAddress ip = webSocket.remoteIP(num);
+        Serial.printf("[%u] Connected from %d.%d.%d.%d url: %s\n", num, ip[0], ip[1], ip[2], ip[3], payload);
+      }
+      break;
+    case WStype_TEXT:                     // if new text data is received
+      Serial.printf("[%u] get Text: %s\n", num, payload);
+      //if (payload[0] == '#') {            // we get RGB data
+      //}
+      break;
   }
 }
+String getContentType(String filename)
+{
+  if (filename.endsWith(".htm"))
+    return "text/html";
+  else if (filename.endsWith(".html"))
+    return "text/html";
+  else if (filename.endsWith(".css"))
+    return "text/css";
+  else if (filename.endsWith(".js"))
+    return "application/javascript";
+  else if (filename.endsWith(".png"))
+    return "image/png";
+  else if (filename.endsWith(".gif"))
+    return "image/gif";
+  else if (filename.endsWith(".jpg"))
+    return "image/jpeg";
+  else if (filename.endsWith(".ico"))
+    return "image/x-icon";
+  else if (filename.endsWith(".xml"))
+    return "text/xml";
+  else if (filename.endsWith(".pdf"))
+    return "application/x-pdf";
+  else if (filename.endsWith(".zip"))
+    return "application/x-zip";
+  else if (filename.endsWith(".gz"))
+    return "application/x-gzip";
+  return "text/plain";
+}
+
+bool handleFileRead(String path)
+{ // send the right file to the client (if it exists)
+  Serial.println("handleFileRead: " + path);
+  if (path.endsWith("/"))
+    path += "index.html";                    // If a folder is requested, send the index file
+  String contentType = getContentType(path); // Get the MIME type
+  if (SPIFFS.exists(path))
+  {                                                     // If the file exists
+    File file = SPIFFS.open(path, "r");                 // Open it
+    size_t sent = server.streamFile(file, contentType); // And send it to the client
+    file.close();                                       // Then close the file again
+    return true;
+  }
+  Serial.println("\tFile Not Found");
+  return false;
+}
+void saveValues()
+{
+  Serial.println("Blargh!!!!");
+  if (server.hasArg("mqtt_server"))
+  {
+    Serial.printf("Server data: %s", server.arg("mqtt_server").c_str());
+  }
+  else
+  {
+    Serial.println("Something went wrong!");
+  }
+  }
+  void loop()
+  {
+    // put your main code here, to run repeatedly:
+    if (WiFi.status() == WL_CONNECTED) // Start the ASyncWebServer
+    {
+      server.handleClient();
+    }
+  }
+  void setupFunction()
+  {
+    Serial.println("I'm in the function!");
+    redirectToUri("/");
+    return;
+  }
+
+  void redirectToUri(String uri)
+  {
+
+    server.sendHeader("Location", uri, true);
+    server.send(302, "text/html", "");
+  }
