@@ -4,6 +4,8 @@
 #include <ESP8266WiFi.h>
 #include <ESPAsyncWebServer.h>
 #include <PubSubClient.h>
+#include "sensors.h"
+
 
 //Prototypes
 String processor(const String &var);
@@ -26,6 +28,7 @@ const double maxTimeBetweenScans = 2500;
 const String clientId = "EWTGDC-" + String(random(0xffff), HEX);
 
 // Globals
+MySensors sensor;
 AsyncWebServer server(80);
 
 WiFiClient espClient;
@@ -466,6 +469,7 @@ void setupMQTT()
 void loop()
 {
   String msg;
+  
   if (!client.connected()) {
     reconnect();
   }
@@ -474,9 +478,12 @@ void loop()
   long now = millis();
   if (now - lastMsg > 2000) {
     lastMsg = now;
-    msg = lastMsg;
-    Serial.println(msg.c_str());
-    client.publish("doorStatus", msg.c_str());
+    //msg = lastMsg;
+    //Serial.println(msg.c_str());
+    //client.publish("doorStatus", msg.c_str());
+    
+    client.publish("doorStatus",sensor.readReedSensor() ? "Open" : "Closed");
+
   }
 
 
