@@ -232,7 +232,7 @@ void launchInitialConfig()
   // Start WebServer
   Serial.println("Starting web server...");
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(SPIFFS, "/index.html", String(), false, processor);
+    request->send(SPIFFS, "/wificonfig.html", String(), false, processor);
   });
   server.on("/style.css", HTTP_GET, [](AsyncWebServerRequest *request) {
     request->send(SPIFFS, "/style.css", "text/css");
@@ -288,7 +288,10 @@ void launchRegularServer()
 {
   Serial.println("Starting web server...");
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(SPIFFS, "/main.html", String(), false, processor);
+    request->send(SPIFFS, "/runtime.html", String(), false, processor);
+  });
+  server.on("/mqttconfig", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(SPIFFS, "/mqttconfig.html", String(), false, processor);
   });
   server.on("/style.css", HTTP_GET, [](AsyncWebServerRequest *request) {
     request->send(SPIFFS, "/style.css", "text/css");
