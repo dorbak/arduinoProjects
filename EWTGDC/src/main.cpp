@@ -44,14 +44,14 @@ void setup()
   }
 
   Serial.println("FileSystem loaded");
-  
+
   listFilesOnSPIFFS();
 
   // Check to see if we have saved variables for our Wifi Connection
   // Look for WIFIConfiguration.txt file
   if (SPIFFS.exists(wifiConfiguration))
   {
-  //  Serial.println("wifiConfiguration file found");
+    //  Serial.println("wifiConfiguration file found");
     File file = SPIFFS.open(wifiConfiguration, "r");
     // If Exists...
     // Load contents
@@ -72,7 +72,7 @@ void setup()
     Serial.printf("Attempting to connect to: %s", wifiConnectionName.c_str());
     WiFi.begin(wifiConnectionName, wifiConnectionPassword);
     int retryCount = 0;
-    while (WiFi.status() != WL_CONNECTED && retryCount < 12)
+    while (WiFi.status() != WL_CONNECTED && retryCount < 60)
     {
 
       Serial.print(".");
@@ -108,8 +108,8 @@ void setup()
   if (SPIFFS.exists(mqttConfiguration))
   {
     Serial.println("Loading mqtt parameters");
-     File file = SPIFFS.open(mqttConfiguration, "r");
-     StaticJsonDocument<1024> doc;
+    File file = SPIFFS.open(mqttConfiguration, "r");
+    StaticJsonDocument<1024> doc;
     // Deserialize the JSON document
     DeserializationError error = deserializeJson(doc, file);
     if (error)
@@ -119,14 +119,12 @@ void setup()
     }
 
     mqtt_server = doc["mqttServer"].as<String>();
-    mqtt_server_port=doc["mqttServerPort"].as<String>();
-    mqtt_user=doc["mqttUser"].as<String>();
-    mqtt_password=doc["mqttPassword"].as<String>();
-    Serial.printf("Server: %s\tPort: %s\tUsername: %s\tPassword: %s",mqtt_server.c_str(), mqtt_server_port.c_str(), mqtt_user.c_str(), mqtt_password.c_str());
+    mqtt_server_port = doc["mqttServerPort"].as<String>();
+    mqtt_user = doc["mqttUser"].as<String>();
+    mqtt_password = doc["mqttPassword"].as<String>();
+    Serial.printf("Server: %s\tPort: %s\tUsername: %s\tPassword: %s", mqtt_server.c_str(), mqtt_server_port.c_str(), mqtt_user.c_str(), mqtt_password.c_str());
     file.close();
   }
-
-
 }
 String scanAvailableNetworks()
 {
@@ -232,7 +230,10 @@ void launchInitialConfig()
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
     request->send(SPIFFS, "/index.html", String(), false, processor);
   });
-   server.on("/reset", HTTP_GET, [](AsyncWebServerRequest *request){
+  server.on("/style.css", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(SPIFFS, "/style.css", "text/css");
+  });
+  server.on("/reset", HTTP_GET, [](AsyncWebServerRequest *request) {
     if (SPIFFS.exists(mqttConfiguration) || SPIFFS.exists(wifiConfiguration))
     {
       Serial.printf("Resetting all settings - you'll need to reconfigure your controller");
@@ -244,15 +245,15 @@ void launchInitialConfig()
     request->redirect("/");
   });
 
-  server.on("/submit",HTTP_POST, [](AsyncWebServerRequest *request){
-    int paramsNr = request -> params();
-    bool foundpassword= false;
+  server.on("/submit", HTTP_POST, [](AsyncWebServerRequest *request) {
+    int paramsNr = request->params();
+    bool foundpassword = false;
     bool foundSSID = false;
-    for(int i = 0;i < paramsNr;i++)
+    for (int i = 0; i < paramsNr; i++)
     {
-      AsyncWebParameter* p = request->getParam(i);
+      AsyncWebParameter *p = request->getParam(i);
       String paramName = p->name();
-      
+
       if (paramName == "password")
       {
         wifiConnectionPassword = p->value();
@@ -274,19 +275,21 @@ void launchInitialConfig()
       //Serial.println("frick");
     }
     request->redirect("/");
-    
   });
-  server.begin(); 
+  server.begin();
   Serial.println("Started.");
 }
 
 void launchRegularServer()
 {
- Serial.println("Starting web server...");
+  Serial.println("Starting web server...");
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
     request->send(SPIFFS, "/main.html", String(), false, processor);
   });
-  server.on("/reset", HTTP_GET, [](AsyncWebServerRequest *request){
+  server.on("/style.css", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(SPIFFS, "/style.css", "text/css");
+  });
+  server.on("/reset", HTTP_GET, [](AsyncWebServerRequest *request) {
     if (SPIFFS.exists(mqttConfiguration) || SPIFFS.exists(wifiConfiguration))
     {
       Serial.printf("Resetting all settings - you'll need to reconfigure your controller");
@@ -297,15 +300,15 @@ void launchRegularServer()
     }
     request->redirect("/");
   });
-  server.on("/submit",HTTP_POST, [](AsyncWebServerRequest *request){
-    int paramsNr = request -> params();
+  server.on("/submit", HTTP_POST, [](AsyncWebServerRequest *request) {
+    int paramsNr = request->params();
     bool mqtt_server_found, mqtt_server_port_found, mqtt_user_found, mqtt_password_found = false;
 
-    for(int i = 0;i < paramsNr;i++)
+    for (int i = 0; i < paramsNr; i++)
     {
-      AsyncWebParameter* p = request->getParam(i);
+      AsyncWebParameter *p = request->getParam(i);
       String paramName = p->name();
-      
+
       if (paramName == "mqtt_server")
       {
         mqtt_server = p->value();
@@ -338,9 +341,8 @@ void launchRegularServer()
       //Serial.println("frick");
     }
     request->redirect("/");
-    
   });
-  server.begin(); 
+  server.begin();
   Serial.println("Started.");
 }
 void saveValues()
@@ -348,7 +350,7 @@ void saveValues()
   StaticJsonDocument<100> doc;
   File configFile = SPIFFS.open(wifiConfiguration, "w");
   // Set the values in the document
-  
+
   doc["wifiConnectionName"] = wifiConnectionName;
   doc["wifiConnectionPassword"] = wifiConnectionPassword;
   if (serializeJson(doc, configFile) == 0)
@@ -366,7 +368,7 @@ void saveValues2()
   StaticJsonDocument<250> doc;
   File configFile = SPIFFS.open(mqttConfiguration, "w");
   // Set the values in the document
-  
+
   doc["mqttServer"] = mqtt_server;
   doc["mqttServerPort"] = mqtt_server_port;
   doc["mqttUser"] = mqtt_user;
