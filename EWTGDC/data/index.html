@@ -13,12 +13,13 @@
     <p>
         This is where the Garage Door Controller Configuration would go.
     </p>
-    <form>
-        <label for="mqtt_server">MQTT Server:</label>
-        <input type="text" name="mqtt_server">
-        <button onclick="submit" id="submit" >Submit</button><p></p>
-        <label for="resetWifiSettings">Reset Wifi Settings</label>
-        <input type="checkbox" name="resetWifiSettings">
+    <form action="/submit" method="POST">
+        
+        %ListOfNetworks%
+
+        <label for="Password">Password:</label>
+        <input type="password" name="password">
+        <button onclick="submit" id="submit">Save Wifi Network</button><p></p>
 
     </form>
 </body>
