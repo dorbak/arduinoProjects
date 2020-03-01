@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>EWT Garage Door Controller Configuration</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+
+<body>
+    <h1>EWT Garage Door Controller</h1>
+    <p>
+        MQTT Configuration
+    </p>
+    <form action="/submit" method="POST">
+        <div>
+            <table>
+
+                <tr class="tablerow">
+                    <td class="tbl_cell">
+                        <label for="mqtt_server" class="mqtt_lbl">MQTT Server IP/Address:</label>
+                    </td>
+                    <td class="tbl_cell">
+                        <input type="text" name="mqtt_server" class="mqtt_text">
+                    </td>
+                </tr>
+                <tr class="tablerow">
+                    <td class="tbl_cell">
+                        <label for="mqtt_server_port" class="mqtt_lbl">MQTT Port:</label>
+                    </td>
+                    <td class="tbl_cell">
+                        <input type="text" name="mqtt_server_port" class="mqtt_text">
+                    </td>
+                </tr>
+                <tr class="tablerow">
+                    <td class="tbl_cell">
+                        <label for="mqtt_user" class="mqtt_lbl">MQTT User:</label>
+                    </td>
+                    <td class="tbl_cell">
+                        <input type="text" name="mqtt_user" class="mqtt_text">
+                    </td>
+                </tr>
+                <tr class="tablerow">
+                    <td class="tbl_cell">
+                        <label for="mqtt_password" class="mqtt_lbl">MQTT Password:</label>
+                    </td>
+                    <td class="tbl_cell">
+                        <input type="password" name="mqtt_password" class="mqtt_text">
+                    </td>
+                </tr>
+            </table>
+            <button onclick="submit" id="submit">Save MQTT Configuration</button>
+        </div>
+    </form>
+</body>
+
+</html>

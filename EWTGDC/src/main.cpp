@@ -11,19 +11,22 @@ void listFilesOnSPIFFS();
 void launchInitialConfig();
 void launchRegularServer();
 void saveValues();
+void saveValues2();
 
 //Constants
 bool oneTime = true;
 const char wifiAPIdentifier[] = "EWTGDC";
 //const char wifiAPPassword[] = "password";
-const String configuration = "/WIFIConfiguration.txt";
+const String wifiConfiguration = "/wifiConfiguration.cfg";
+const String mqttConfiguration = "/mqttConfiguration.cfg";
 const double maxTimeBetweenScans = 2500;
 
 // Globals
 AsyncWebServer server(80);
 
-String wifiConnectionName = "undefined";
-String wifiConnectionPassword = "undefined";
+String wifiConnectionName, wifiConnectionPassword;
+String mqtt_server, mqtt_server_port, mqtt_user, mqtt_password;
+
 String availableNetworks;
 double lastScanTime = 0;
 
@@ -41,14 +44,14 @@ void setup()
 
   Serial.println("FileSystem loaded");
   
-  //listFilesOnSPIFFS();
+  listFilesOnSPIFFS();
 
   // Check to see if we have saved variables for our Wifi Connection
   // Look for WIFIConfiguration.txt file
-  if (SPIFFS.exists(configuration))
+  if (SPIFFS.exists(wifiConfiguration))
   {
-  //  Serial.println("Configuration file found");
-    File file = SPIFFS.open(configuration, "r");
+  //  Serial.println("wifiConfiguration file found");
+    File file = SPIFFS.open(wifiConfiguration, "r");
     // If Exists...
     // Load contents
     StaticJsonDocument<512> doc;
@@ -56,7 +59,7 @@ void setup()
     DeserializationError error = deserializeJson(doc, file);
     if (error)
     {
-      Serial.println(F("Failed to read file, using default configuration"));
+      Serial.println(F("Failed to read file, using default wifiConfiguration"));
       Serial.println(error.code());
     }
     wifiConnectionName = doc["wifiConnectionName"].as<String>();
@@ -78,9 +81,9 @@ void setup()
     if (WiFi.status() != WL_CONNECTED)
     {
       Serial.printf("Unable to connect to WiFi -- re-enabling SoftAP\n");
-      if (SPIFFS.exists(configuration))
+      if (SPIFFS.exists(wifiConfiguration))
       {
-        SPIFFS.remove(configuration);
+        SPIFFS.remove(wifiConfiguration);
         delay(500);
         Serial.printf("Restarting controller...\n");
         ESP.restart();
@@ -193,10 +196,10 @@ void launchInitialConfig()
     request->send(SPIFFS, "/index.html", String(), false, processor);
   });
   server.on("/reset", HTTP_GET, [](AsyncWebServerRequest *request){
-    if (SPIFFS.exists(configuration))
+    if (SPIFFS.exists(wifiConfiguration))
     {
-      Serial.printf("Resetting Wifi Configuration - you'll need to resave your credentials");
-      SPIFFS.remove(configuration);
+      Serial.printf("Resetting Wifi wifiConfiguration - you'll need to resave your credentials");
+      SPIFFS.remove(wifiConfiguration);
       delay(500);
       ESP.restart();
     }
@@ -242,13 +245,13 @@ void launchRegularServer()
 {
  Serial.println("Starting web server...");
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(SPIFFS, "/index.html", String(), false, processor);
+    request->send(SPIFFS, "/main.html", String(), false, processor);
   });
   server.on("/reset", HTTP_GET, [](AsyncWebServerRequest *request){
-    if (SPIFFS.exists(configuration))
+    if (SPIFFS.exists(wifiConfiguration))
     {
-      Serial.printf("Resetting Wifi Configuration - you'll need to resave your credentials");
-      SPIFFS.remove(configuration);
+      Serial.printf("Resetting MQTT wifiConfiguration - you'll need to reconfigure your MQTT settings");
+      SPIFFS.remove(wifiConfiguration);
       delay(500);
       ESP.restart();
     }
@@ -256,27 +259,37 @@ void launchRegularServer()
   });
   server.on("/submit",HTTP_POST, [](AsyncWebServerRequest *request){
     int paramsNr = request -> params();
-    bool foundpassword= false;
-    bool foundSSID = false;
+    bool mqtt_server_found, mqtt_server_port_found, mqtt_user_found, mqtt_password_found = false;
+
     for(int i = 0;i < paramsNr;i++)
     {
       AsyncWebParameter* p = request->getParam(i);
       String paramName = p->name();
       
-      if (paramName == "password")
+      if (paramName == "mqtt_server")
       {
-        wifiConnectionPassword = p->value();
-        foundSSID = true;
+        mqtt_server = p->value();
+        mqtt_server_found = true;
       }
-      else if (paramName == "ssid")
+      else if (paramName == "mqtt_server_port")
       {
-        wifiConnectionName = p->value();
-        foundpassword = true;
+        mqtt_server_port = p->value();
+        mqtt_server_port_found = true;
+      }
+      if (paramName == "mqtt_user")
+      {
+        mqtt_user = p->value();
+        mqtt_user_found = true;
+      }
+      else if (paramName == "mqtt_password")
+      {
+        mqtt_password = p->value();
+        mqtt_password_found = true;
       }
     }
-    if (foundSSID && foundpassword)
+    if (mqtt_server_found && mqtt_server_port_found && mqtt_user_found && mqtt_password_found)
     {
-      saveValues();
+      saveValues2();
       //Serial.println("Found both!");
     }
     else
@@ -292,7 +305,7 @@ void launchRegularServer()
 void saveValues()
 {
   StaticJsonDocument<100> doc;
-  File configFile = SPIFFS.open(configuration, "w");
+  File configFile = SPIFFS.open(wifiConfiguration, "w");
   // Set the values in the document
   
   doc["wifiConnectionName"] = wifiConnectionName;
@@ -302,9 +315,27 @@ void saveValues()
     Serial.println(F("Failed to write to file"));
   }
   configFile.close();
-  Serial.println("Wifi configuration saved.  Rebooting");
+  Serial.println("Wifi wifiConfiguration saved.  Rebooting");
   delay(500);
   ESP.restart();
+  return;
+}
+void saveValues2()
+{
+  StaticJsonDocument<100> doc;
+  File configFile = SPIFFS.open(mqttConfiguration, "w");
+  // Set the values in the document
+  
+  doc["mqttServer"] = mqtt_server;
+  doc["mqttServerPort"] = mqtt_server_port;
+  doc["mqttUser"] = mqtt_user;
+  doc["mqttPassword"] = mqtt_password;
+  if (serializeJson(doc, configFile) == 0)
+  {
+    Serial.println(F("Failed to write to file"));
+  }
+  configFile.close();
+  Serial.println("MQTT Configuration saved.  Rebooting");
   return;
 }
 void listFilesOnSPIFFS()
