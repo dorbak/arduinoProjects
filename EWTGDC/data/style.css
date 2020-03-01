@@ -13,3 +13,22 @@ table{
     border-color: black;
     
 }
+label.lblStatus {
+    color:blue;
+    margin-left: auto;
+    margin-right:auto;
+}
+label.SensorStatus{
+    color:white;
+}
+div.statusdiv{
+    width: 80%;
+    margin: 0 auto;
+    padding: 20px;
+    background: rgb(20, 165, 141);
+}
+h1 {
+    text-align: center;
+    color: blue;
+    font-size: 64px;
+}

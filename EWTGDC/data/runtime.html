@@ -10,61 +10,25 @@
 
 <body>
     <h1>EWT Garage Door Controller</h1>
-    <p>
-        Status Page
-    </p>
-    <form action="/submit" method="POST">
-        <div>
-            <table>
+    <div class="statusdiv">
+        <p>
+            Status Page<br>
+            <label class="lblStatus" name="sensorStatusLabel" for="sensorStatus">Garage door is: </label>
+            <label class="SensorStatus" name="sensorStatus" id="sensorStatus">%DoorStatus%</label>
+        </p>
+    </div>
 
-                <tr class="tablerow">
-                    <td width="130px" class="tbl_cell">
-                        <label for="mqtt_server" class="mqtt_lbl1">MQTT Server IP/Address:</label>
-                    </td>
-                    <td class="tbl_cell">
-                        <input type="text" name="mqtt_server" class="mqtt_text">
-                    </td>
-                    <td class="tbl_cell">
-                        <label type="text" name="saved_mqtt_server" class="mqtt_saved">%mqttserver%</label>
-                    </td>
-                </tr>
-                <tr class="tablerow">
-                    <td class="tbl_cell">
-                        <label for="mqtt_server_port" class="mqtt_lbl1">MQTT Port:</label>
-                    </td>
-                    <td class="tbl_cell">
-                        <input type="text" name="mqtt_server_port" class="mqtt_text">
-                    </td>
-                    <td class="tbl_cell">
-                        <label type="text" name="saved_mqtt_port" class="mqtt_saved">%mqttport%</label>
-                    </td>
-                </tr>
-                <tr class="tablerow">
-                    <td class="tbl_cell">
-                        <label for="mqtt_user" class="mqtt_lbl1">MQTT User:</label>
-                    </td>
-                    <td class="tbl_cell">
-                        <input type="text" name="mqtt_user" class="mqtt_text">
-                    </td>
-                    <td class="tbl_cell">
-                        <label type="text" name="saved_mqtt_user" class="mqtt_saved">%mqttuser%</label>
-                    </td>
-                </tr>
-                <tr class="tablerow">
-                    <td class="tbl_cell">
-                        <label for="mqtt_password" class="mqtt_lbl1">MQTT Password:</label>
-                    </td>
-                    <td class="tbl_cell">
-                        <input type="password" name="mqtt_password" class="mqtt_text">
-                    </td>
-                    <td class="tbl_cell">
-                        <label type="text" name="saved_mqtt_password" class="mqtt_saved"><i>Hidden</i></label>
-                    </td>
-                </tr>
-            </table>
-            <button onclick="submit" id="submit">Save MQTT Configuration</button>
-        </div>
-    </form>
 </body>
-
+<script>
+    setInterval(function ( ) {
+      var xhttp = new XMLHttpRequest();
+      xhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+          document.getElementById("sensorStatus").innerHTML = this.responseText;
+        }
+      };
+      xhttp.open("GET", "/getDoorStatus", true);
+      xhttp.send();
+    }, 500 ) ;
+</script>
 </html>

@@ -25,7 +25,8 @@ const char wifiAPIdentifier[] = "EWTGDC";
 const String wifiConfiguration = "/wifiConfiguration.cfg";
 const String mqttConfiguration = "/mqttConfiguration.cfg";
 const double maxTimeBetweenScans = 2500;
-const String clientId = "EWTGDC-" + String(random(0xffff), HEX);
+const String mac = WiFi.macAddress();
+const String clientId = "EWTGDC-" + mac.substring(12, 14) + mac.substring(15, 17);
 
 // Globals
 MySensors sensor;
@@ -64,7 +65,7 @@ void setup()
   // put your setup code here, to run once:
   Serial.begin(115200);
   Serial.println("Starting up...");
- 
+  Serial.printf("Client ID: %s\n", clientId.c_str());
   setupSPIFFS();
   setupWiFi();
   setupMQTT();
@@ -194,6 +195,10 @@ String processor(const String &var)
     //Serial.println("Leaving processor()");
     return html;
   }
+  if (var == "DoorStatus")
+  {
+    return sensor.readReedSensor() ? "Open" : "Closed";
+  }
   if (var == "mqttserver")
   {
     return mqtt_server;
@@ -296,6 +301,10 @@ void launchRegularServer()
   server.on("/style.css", HTTP_GET, [](AsyncWebServerRequest *request) {
     request->send(SPIFFS, "/style.css", "text/css");
   });
+server.on("/getDoorStatus", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send_P(200, "text/plain", sensor.readReedSensor() ? "Open" : "Closed");
+  });
+
   server.on("/reset", HTTP_GET, [](AsyncWebServerRequest *request) {
     if (SPIFFS.exists(mqttConfiguration) || SPIFFS.exists(wifiConfiguration))
     {
@@ -341,6 +350,7 @@ void launchRegularServer()
     if (mqtt_server_found && mqtt_server_port_found && mqtt_user_found && mqtt_password_found)
     {
       saveValues2();
+
       //Serial.println("Found both!");
     }
     else
@@ -385,7 +395,9 @@ void saveValues2()
     Serial.println(F("Failed to write to file"));
   }
   configFile.close();
-  Serial.println("MQTT Configuration saved.");
+  Serial.println("MQTT Configuration saved - Rebooting.");
+  delay(500);
+  reconnect();
   return;
 }
 void listFilesOnSPIFFS()
@@ -455,12 +467,12 @@ void setupMQTT()
     //Serial.printf("Server: %s\tPort: %s\tUsername: %s\tPassword: %s", mqtt_server.c_str(), mqtt_server_port.c_str(), mqtt_user.c_str(), mqtt_password.c_str());
     file.close();
   }
-  if (WiFi.status() != WL_CONNECTED)
+  /* if (WiFi.status() != WL_CONNECTED)
   {
     Serial.println("No network connection - rebooting");
     delay(500);
     ESP.restart();
-  }
+  } */
   //Serial.println("Network connection found - continuing");
   Serial.println("Setting up MQTT connection");
   //Serial.printf("Server: %s\tPort: %s\n", mqtt_server.c_str(), mqtt_server_port.c_str());
