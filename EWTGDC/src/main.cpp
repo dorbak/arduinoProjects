@@ -3,6 +3,7 @@
 #include "ArduinoJson.h"
 #include <ESP8266WiFi.h>
 #include <ESPAsyncWebServer.h>
+#include <PubSubClient.h>
 
 //Prototypes
 String processor(const String &var);
@@ -12,17 +13,23 @@ void launchInitialConfig();
 void launchRegularServer();
 void saveValues();
 void saveValues2();
-
+void setupMQTT();
+void setupWiFi();
+void mqttCallback(char* topic, byte* payload, unsigned int length);
+void setupSPIFFS();
 //Constants
 bool oneTime = true;
 const char wifiAPIdentifier[] = "EWTGDC";
-//const char wifiAPPassword[] = "password";
 const String wifiConfiguration = "/wifiConfiguration.cfg";
 const String mqttConfiguration = "/mqttConfiguration.cfg";
 const double maxTimeBetweenScans = 2500;
+const String clientId = "EWTGDC-" + String(random(0xffff), HEX);
 
 // Globals
 AsyncWebServer server(80);
+
+WiFiClient espClient;
+PubSubClient client(espClient);
 
 String wifiConnectionName, wifiConnectionPassword;
 String mqtt_server, mqtt_server_port, mqtt_user = "unset";
@@ -30,13 +37,14 @@ String mqtt_password = "unset";
 
 String availableNetworks;
 double lastScanTime = 0;
+long lastMsg = 0;
+char msg[50];
+int value = 0;
 
-void setup()
+
+void setupSPIFFS()
 {
-  // put your setup code here, to run once:
-  Serial.begin(115200);
-  Serial.println("Starting up...");
-  // Start FileSystem (SPIFFS)
+// Start FileSystem (SPIFFS)
   if (!SPIFFS.begin())
   {
     Serial.println("Panic - failed to initialize File System");
@@ -46,7 +54,21 @@ void setup()
   Serial.println("FileSystem loaded");
 
   listFilesOnSPIFFS();
+}
 
+void setup()
+{
+  // put your setup code here, to run once:
+  Serial.begin(115200);
+  Serial.println("Starting up...");
+ 
+  setupSPIFFS();
+  setupWiFi();
+  setupMQTT();
+}
+
+void setupWiFi()
+{
   // Check to see if we have saved variables for our Wifi Connection
   // Look for WIFIConfiguration.txt file
   if (SPIFFS.exists(wifiConfiguration))
@@ -98,34 +120,13 @@ void setup()
   {
     //Serial.println("TODO: Start AP and scan for neighbouring WIFI SSIDs");
     WiFi.mode(WIFI_AP_STA);
-    Serial.println(WiFi.softAP(wifiAPIdentifier) ? "Ready" : "Failed");
+    Serial.println(WiFi.softAP(clientId) ? "Ready" : "Failed");
     Serial.print("AP IP Address: ");
     Serial.println(WiFi.softAPIP());
     launchInitialConfig();
   }
-
-  //Load (if any) MQTT parameters
-  if (SPIFFS.exists(mqttConfiguration))
-  {
-    Serial.println("Loading mqtt parameters");
-    File file = SPIFFS.open(mqttConfiguration, "r");
-    StaticJsonDocument<1024> doc;
-    // Deserialize the JSON document
-    DeserializationError error = deserializeJson(doc, file);
-    if (error)
-    {
-      Serial.println(F("Failed to read file, using default wifiConfiguration"));
-      Serial.println(error.code());
-    }
-
-    mqtt_server = doc["mqttServer"].as<String>();
-    mqtt_server_port = doc["mqttServerPort"].as<String>();
-    mqtt_user = doc["mqttUser"].as<String>();
-    mqtt_password = doc["mqttPassword"].as<String>();
-    Serial.printf("Server: %s\tPort: %s\tUsername: %s\tPassword: %s", mqtt_server.c_str(), mqtt_server_port.c_str(), mqtt_user.c_str(), mqtt_password.c_str());
-    file.close();
-  }
 }
+
 String scanAvailableNetworks()
 {
 
@@ -394,13 +395,89 @@ void listFilesOnSPIFFS()
     Serial.println(str);
   }
 }
+
+void mqttCallback(char* topic, byte* payload, unsigned int length)
+{
+
+}
+bool reconnect()
+{
+  //Serial.printf("Server: %s\tPort: %s\tUsername: %s\tPassword: %s", mqtt_server.c_str(), mqtt_server_port.c_str(), mqtt_user.c_str(), mqtt_password.c_str());
+  while (!client.connected()) {
+    Serial.println("Attempting MQTT connection...");
+    // Attempt to connect
+    //if (client.connect(clientId.c_str()))
+    if (client.connect(clientId.c_str(),mqtt_user.c_str(), mqtt_password.c_str()))
+    {
+      Serial.println("Connected to MQTT Broker");
+      // Once connected, publish an announcement...
+      // client.publish("doorStatus", "Connected");
+      // ... and resubscribe
+      client.subscribe("extDoorTrigger");
+    }
+    else
+    {
+      Serial.print("failed, rc=");
+      Serial.print(client.state());
+      Serial.println(" try again in 5 seconds");
+      // Wait 5 seconds before retrying
+      delay(5000);
+    }
+  }
+  return true;
+}
+void setupMQTT()
+{
+  //Load (if any) MQTT parameters
+  if (SPIFFS.exists(mqttConfiguration))
+  {
+    Serial.println("Loading mqtt parameters");
+    File file = SPIFFS.open(mqttConfiguration, "r");
+    StaticJsonDocument<1024> doc;
+    // Deserialize the JSON document
+    DeserializationError error = deserializeJson(doc, file);
+    if (error)
+    {
+      Serial.println(F("Failed to read file, using default wifiConfiguration"));
+      Serial.println(error.code());
+    }
+
+    mqtt_server = doc["mqttServer"].as<String>();
+    mqtt_server_port = doc["mqttServerPort"].as<String>();
+    mqtt_user = doc["mqttUser"].as<String>();
+    mqtt_password = doc["mqttPassword"].as<String>();
+    //Serial.printf("Server: %s\tPort: %s\tUsername: %s\tPassword: %s", mqtt_server.c_str(), mqtt_server_port.c_str(), mqtt_user.c_str(), mqtt_password.c_str());
+    file.close();
+  }
+  if (WiFi.status() != WL_CONNECTED)
+  {
+    Serial.println("No network connection - rebooting");
+    delay(500);
+    ESP.restart();
+  }
+  //Serial.println("Network connection found - continuing");
+  Serial.println("Setting up MQTT connection");
+  //Serial.printf("Server: %s\tPort: %s\n", mqtt_server.c_str(), mqtt_server_port.c_str());
+  client.setServer(mqtt_server.c_str(), mqtt_server_port.toInt());
+  client.setCallback(mqttCallback);
+  reconnect();
+}
+
 void loop()
 {
-  while (oneTime)
-  {
-    //  availableNetworks = scanAvailableNetworks();
-    oneTime = false;
+  String msg;
+  if (!client.connected()) {
+    reconnect();
   }
-  // put your main code here, to run repeatedly:
-  // String json_Networks = scanAvailableNetworks();
+  client.loop();
+
+  long now = millis();
+  if (now - lastMsg > 2000) {
+    lastMsg = now;
+    msg = lastMsg;
+    Serial.println(msg.c_str());
+    client.publish("doorStatus", msg.c_str());
+  }
+
+
 }
