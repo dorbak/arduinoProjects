@@ -18,35 +18,47 @@
             <table>
 
                 <tr class="tablerow">
-                    <td class="tbl_cell">
-                        <label for="mqtt_server" class="mqtt_lbl">MQTT Server IP/Address:</label>
+                    <td width="130px" class="tbl_cell">
+                        <label for="mqtt_server" class="mqtt_lbl1">MQTT Server IP/Address:</label>
                     </td>
                     <td class="tbl_cell">
                         <input type="text" name="mqtt_server" class="mqtt_text">
                     </td>
+                    <td class="tbl_cell">
+                        <label type="text" name="saved_mqtt_server" class="mqtt_saved">%mqttserver%</label>
+                    </td>
                 </tr>
                 <tr class="tablerow">
                     <td class="tbl_cell">
-                        <label for="mqtt_server_port" class="mqtt_lbl">MQTT Port:</label>
+                        <label for="mqtt_server_port" class="mqtt_lbl1">MQTT Port:</label>
                     </td>
                     <td class="tbl_cell">
                         <input type="text" name="mqtt_server_port" class="mqtt_text">
                     </td>
+                    <td class="tbl_cell">
+                        <label type="text" name="saved_mqtt_port" class="mqtt_saved">%mqttport%</label>
+                    </td>
                 </tr>
                 <tr class="tablerow">
                     <td class="tbl_cell">
-                        <label for="mqtt_user" class="mqtt_lbl">MQTT User:</label>
+                        <label for="mqtt_user" class="mqtt_lbl1">MQTT User:</label>
                     </td>
                     <td class="tbl_cell">
                         <input type="text" name="mqtt_user" class="mqtt_text">
                     </td>
+                    <td class="tbl_cell">
+                        <label type="text" name="saved_mqtt_user" class="mqtt_saved">%mqttuser%</label>
+                    </td>
                 </tr>
                 <tr class="tablerow">
                     <td class="tbl_cell">
-                        <label for="mqtt_password" class="mqtt_lbl">MQTT Password:</label>
+                        <label for="mqtt_password" class="mqtt_lbl1">MQTT Password:</label>
                     </td>
                     <td class="tbl_cell">
                         <input type="password" name="mqtt_password" class="mqtt_text">
+                    </td>
+                    <td class="tbl_cell">
+                        <label type="text" name="saved_mqtt_password" class="mqtt_saved"><i>Hidden</i></label>
                     </td>
                 </tr>
             </table>

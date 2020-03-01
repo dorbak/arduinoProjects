@@ -25,7 +25,8 @@ const double maxTimeBetweenScans = 2500;
 AsyncWebServer server(80);
 
 String wifiConnectionName, wifiConnectionPassword;
-String mqtt_server, mqtt_server_port, mqtt_user, mqtt_password;
+String mqtt_server, mqtt_server_port, mqtt_user = "unset";
+String mqtt_password = "unset";
 
 String availableNetworks;
 double lastScanTime = 0;
@@ -102,6 +103,30 @@ void setup()
     Serial.println(WiFi.softAPIP());
     launchInitialConfig();
   }
+
+  //Load (if any) MQTT parameters
+  if (SPIFFS.exists(mqttConfiguration))
+  {
+    Serial.println("Loading mqtt parameters");
+     File file = SPIFFS.open(mqttConfiguration, "r");
+     StaticJsonDocument<1024> doc;
+    // Deserialize the JSON document
+    DeserializationError error = deserializeJson(doc, file);
+    if (error)
+    {
+      Serial.println(F("Failed to read file, using default wifiConfiguration"));
+      Serial.println(error.code());
+    }
+
+    mqtt_server = doc["mqttServer"].as<String>();
+    mqtt_server_port=doc["mqttServerPort"].as<String>();
+    mqtt_user=doc["mqttUser"].as<String>();
+    mqtt_password=doc["mqttPassword"].as<String>();
+    Serial.printf("Server: %s\tPort: %s\tUsername: %s\tPassword: %s",mqtt_server.c_str(), mqtt_server_port.c_str(), mqtt_user.c_str(), mqtt_password.c_str());
+    file.close();
+  }
+
+
 }
 String scanAvailableNetworks()
 {
@@ -167,6 +192,18 @@ String processor(const String &var)
     //Serial.println("Leaving processor()");
     return html;
   }
+  if (var == "mqttserver")
+  {
+    return mqtt_server;
+  }
+  if (var == "mqttport")
+  {
+    return mqtt_server_port;
+  }
+  if (var == "mqttuser")
+  {
+    return mqtt_user;
+  }
   //Serial.println("Leaving processor()");
   return "Never made it in the IF statement - BAD";
 }
@@ -195,16 +232,18 @@ void launchInitialConfig()
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
     request->send(SPIFFS, "/index.html", String(), false, processor);
   });
-  server.on("/reset", HTTP_GET, [](AsyncWebServerRequest *request){
-    if (SPIFFS.exists(wifiConfiguration))
+   server.on("/reset", HTTP_GET, [](AsyncWebServerRequest *request){
+    if (SPIFFS.exists(mqttConfiguration) || SPIFFS.exists(wifiConfiguration))
     {
-      Serial.printf("Resetting Wifi wifiConfiguration - you'll need to resave your credentials");
+      Serial.printf("Resetting all settings - you'll need to reconfigure your controller");
+      SPIFFS.remove(mqttConfiguration);
       SPIFFS.remove(wifiConfiguration);
       delay(500);
       ESP.restart();
     }
     request->redirect("/");
   });
+
   server.on("/submit",HTTP_POST, [](AsyncWebServerRequest *request){
     int paramsNr = request -> params();
     bool foundpassword= false;
@@ -217,12 +256,12 @@ void launchInitialConfig()
       if (paramName == "password")
       {
         wifiConnectionPassword = p->value();
-        foundSSID = true;
+        foundpassword = true;
       }
       else if (paramName == "ssid")
       {
         wifiConnectionName = p->value();
-        foundpassword = true;
+        foundSSID = true;
       }
     }
     if (foundSSID && foundpassword)
@@ -248,9 +287,10 @@ void launchRegularServer()
     request->send(SPIFFS, "/main.html", String(), false, processor);
   });
   server.on("/reset", HTTP_GET, [](AsyncWebServerRequest *request){
-    if (SPIFFS.exists(wifiConfiguration))
+    if (SPIFFS.exists(mqttConfiguration) || SPIFFS.exists(wifiConfiguration))
     {
-      Serial.printf("Resetting MQTT wifiConfiguration - you'll need to reconfigure your MQTT settings");
+      Serial.printf("Resetting all settings - you'll need to reconfigure your controller");
+      SPIFFS.remove(mqttConfiguration);
       SPIFFS.remove(wifiConfiguration);
       delay(500);
       ESP.restart();
@@ -283,6 +323,7 @@ void launchRegularServer()
       }
       else if (paramName == "mqtt_password")
       {
+        Serial.println(p->value());
         mqtt_password = p->value();
         mqtt_password_found = true;
       }
@@ -322,7 +363,7 @@ void saveValues()
 }
 void saveValues2()
 {
-  StaticJsonDocument<100> doc;
+  StaticJsonDocument<250> doc;
   File configFile = SPIFFS.open(mqttConfiguration, "w");
   // Set the values in the document
   
@@ -335,7 +376,7 @@ void saveValues2()
     Serial.println(F("Failed to write to file"));
   }
   configFile.close();
-  Serial.println("MQTT Configuration saved.  Rebooting");
+  Serial.println("MQTT Configuration saved.");
   return;
 }
 void listFilesOnSPIFFS()
