@@ -19,6 +19,8 @@ void setupMQTT();
 void setupWiFi();
 void mqttCallback(char* topic, byte* payload, unsigned int length);
 void setupSPIFFS();
+bool reconnect();
+
 //Constants
 bool oneTime = true;
 const char wifiAPIdentifier[] = "EWTGDC";

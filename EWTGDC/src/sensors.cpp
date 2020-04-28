@@ -3,7 +3,7 @@
 #include "sensors.h"
 
 
-const int REED_PIN = D0;
+const int REED_PIN = D5;
 
 MySensors::MySensors()
 {
