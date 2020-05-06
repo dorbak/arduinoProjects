@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Lock Status</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+
+<body>
+    <h1>Lock Status</h1>
+    <div class="statusdiv">
+        <p>
+            Status Page<br>
+            <label class="lblStatus" name="lockStatusLabel" for="lockStatus">Lock is: </label>
+            <label class="lblValue" name="lockStatus" id="lockStatus">%lockStatus%</label><br/>
+            <label class="lblStatus" name="lockEndTimeLabel" for="lockEndTime">Scheduled to unlock at: </label>
+            <label class="lblValue" name="lockEndTime" id="lockEndTime">%lockEndTime%</label><br/>
+            <label class="lblStatus" name="lockStartTimeLabel" for="lockStartTime">Locked at: </label>
+            <label class="lblValue" name="lockStartTime" id="lockStartTime">%lockStartTime%</label><br/>
+            <label class="lblStatus" name="lockTimeLeftLabel" for="lockTimeLeft">Locked at: </label>
+            <label class="lblValue" name="lockTimeLeft" id="lockTimeLeft">%lockStartTime%</label><br/>
+            
+            <p><a href="/lock"><button class="button">Lock</button></a></p>
+            <p><a href="/unlock"><button class="button button2">Unlock</button></a></p>
+        </p>
+    </div>
+
+</body>
+<script>
+    setInterval(function ( ) {
+      var xhttp = new XMLHttpRequest();
+      xhttp.onreadystatechange = function() {
+        
+      };
+      xhttp.open("GET", "/", true);
+      xhttp.send();
+    }, 1000 ) ;
+</script>
+</html>

@@ -1,0 +1,33 @@
+
+table{
+    margin-left: auto;
+    margin-right: auto;
+    border-style: solid;
+    border-color: black;
+    
+}
+label.lblStatus {
+    color:white;
+    margin-left: auto;
+    margin-right:auto;
+}
+label.lblValue{
+    color:red;
+    margin-left:  auto;
+    margin-right: auto;
+}
+
+label.SensorStatus{
+    color:white;
+}
+div.statusdiv{
+    width: 80%;
+    margin: 0 auto;
+    padding: 20px;
+    background: rgb(70, 11, 138);
+}
+h1 {
+    text-align: center;
+    color: blue;
+    font-size: 64px;
+}
