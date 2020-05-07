@@ -15,7 +15,7 @@ const int unlocked = 65;
 
 const String emlaAPIUser = "jlpgkzrtnw2y5cw";
 const String elmaAPIkey = "s6h5gfxjuf";
-
+const size_t capacity = JSON_ARRAY_SIZE(0) + 2*JSON_ARRAY_SIZE(3) + JSON_OBJECT_SIZE(2) + 4*JSON_OBJECT_SIZE(4) + 4*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(7) + JSON_OBJECT_SIZE(22) + JSON_OBJECT_SIZE(85) + 2270;
 const int hours = 8;
 
 long timeout = 8 * 60 * 60;
@@ -29,8 +29,13 @@ int currentHour;
 int currentMinute;
 int currentSecond;
 int secondsSinceNTPGet = 0;
+bool firstLoop = true;
 char currentTime[10];
 char currentDay[12];
+long sessionStart;
+long sessionEnd;
+long lockTimeInLock;
+String sessionID;
 
 AsyncWebServer server(80);
 
@@ -41,6 +46,7 @@ String lockStatus = "LockStatus";
 String lockTimeLeft;
 
 char* json;
+String payload;
 
 // NTP Stuff
 WiFiUDP ntpUDP;
@@ -56,6 +62,7 @@ void unlockIt();
 void formatDateTime();
 void setupWebServer();
 void getLockStatus();
+String convertEpochToDateTime(long _epoch);
 
 void setup() {
   // put your setup code here, to run once:
@@ -113,31 +120,42 @@ void setup() {
 }
 void getLockStatus()
 {
-    const size_t bufferSize = JSON_ARRAY_SIZE(0) + 2*JSON_ARRAY_SIZE(3) + JSON_OBJECT_SIZE(2) + 4*JSON_OBJECT_SIZE(4) + 4*JSON_OBJECT_SIZE(5) + JSON_OBJECT_SIZE(7) + JSON_OBJECT_SIZE(22) + JSON_OBJECT_SIZE(85) + 2270;
-    HTTPClient http;
-
+    const uint8_t fingerprint[20] = {0x1C, 0x2B, 0xC2, 0x8B, 0x01, 0x78, 0xA3, 0x6C, 0xA9, 0xF4, 0xAA, 0x15, 0x5F, 0x3D, 0xA0, 0xBD, 0x69, 0x88, 0x54, 0x9E};
+    std::unique_ptr<BearSSL::WiFiClientSecure>client(new BearSSL::WiFiClientSecure);
+    client->setFingerprint(fingerprint);
+    
     // Send request
-    http.useHTTP10(true);
-    http.begin("https://www.emlalock.com/info/?userid=jlpgkzrtnw2y5cw&apikey=s6h5gfxjuf");
-    http.GET();
-
-    Serial.println(http.getStream());
-
-    /* // Parse response
-    DynamicJsonDocument doc(bufferSize);
-    deserializeJson(doc, http.getStream());
-
-    // Read values
-    JsonObject user = doc["user"];
-    Serial.println(doc.as<String>());
- */
-    // Disconnect
-    http.end();
+    //http.useHTTP10(true);
+    HTTPClient https;
+    
+    if (https.begin(*client, "https://www.emlalock.com/info/?userid=jlpgkzrtnw2y5cw&apikey=s6h5gfxjuf"))
+    {
+      int httpCode = https.GET();
+      if (httpCode > 0) {
+        Serial.printf("[HTTPS] GET ... code: %d\n", httpCode);
+      }
+      if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY)
+      {
+        payload = https.getString();
+        //Serial.println(payload);
+      }
+      else
+      {
+        Serial.printf("[HTTPS] GET... failed, error: %s\n", https.errorToString(httpCode).c_str());
+      }
+    }
+    else
+    {
+      Serial.printf("[HTTPS] Unable to connect\n");
+    }
+      // Disconnect
+    https.end();
   
 }
 void setupWebServer()
 {
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+    getLockStatus();
     request->send(SPIFFS, "/control.html", String(), false, processor);
   });
   
@@ -180,20 +198,64 @@ String processor(const String& var){
     return lockStatus;
   }
   if(var == "lockEndTime"){
-    return lockEndTime;
+    return convertEpochToDateTime(sessionEnd);
   }
   if(var == "lockStartTime"){
-    return String(currentDay) + " " + String(currentTime);
+    return convertEpochToDateTime(sessionStart);
   }
-  if(var == "lockTimeLeft"){
-    return lockTimeLeft;
+  if(var == "totalLockTime"){
+    timeClient.update();
+    long rightNow = timeClient.getEpochTime();
+    return convertEpochToDateTime(rightNow-sessionStart);
   }
+
   return String();
 }
- 
+
+String convertEpochToDateTime(long thisEpoch)
+{
+  int _currentDay, _currentMonth, _currentYear, _currentHour, _currentMinute, _currentSecond;
+  struct tm *ptm = gmtime ((time_t *)&thisEpoch); 
+  _currentDay = ptm->tm_mday;
+  _currentMonth = ptm->tm_mon+1;
+  _currentYear = ptm->tm_year+1900;
+  _currentHour = ptm->tm_hour;
+  _currentMinute = ptm->tm_min;
+  _currentSecond = ptm->tm_sec;
+  if (ptm->tm_isdst == 0)
+  {
+    _currentHour = _currentHour + 1;
+  }
+
+  char _datetime[24];
+  sprintf(_datetime,"%04u-%02u-%02u  %02u:%02u:%02u", _currentYear, _currentMonth, _currentDay, _currentHour, _currentMinute, _currentSecond);
+  return _datetime;
+}
+
 void loop() {
   // put your main code here, to run repeatedly:
  
+  if (firstLoop)
+  {
+    //Serial.println(payload);
+    // Parse response
+    DynamicJsonDocument doc(capacity);
+    deserializeJson(doc, payload);
+    JsonObject user = doc["user"];
+    JsonObject sessions = doc["chastitysession"];
+    String user_userid;
+    user_userid = user["userid"].as<String>();
+    sessionID = sessions["chastitysessionid"].as<String>();
+    sessionStart = sessions["startdate"].as<long>();
+    sessionEnd = sessions["enddate"].as<long>();
+    lockTimeInLock = sessions["timeinlock"].as<long>();
+    // Serial.println(user_userid);
+    Serial.println(user_userid);
+    Serial.println(lockTimeInLock);
+    // yield();
+    firstLoop = false;
+  }
+
   secondsSinceNTPGet = secondsSinceNTPGet + 1;
   if (secondsSinceNTPGet > 60)
   {
